@@ -7,7 +7,7 @@ PodStick is a macOS experiment that reads the orientation sensor inside motion-c
 The wonderfully strange physical setup is an AirPod held by its body or stem with the silicone ear tip inverted against a tabletop. The folded tip acts like a soft joystick base while the AirPod's IMU supplies the motion.
 
 > [!NOTE]
-> PodStick is currently a motion playground, not a system-wide controller. It proves the physical interaction and mapping, but does not yet emit keyboard events or present a virtual HID gamepad to other applications.
+> PodStick is not a system-wide controller and does not present a virtual HID gamepad. It can directly control FlightGear over a localhost connection, in addition to its built-in motion playgrounds.
 
 ## What has been proven
 
@@ -45,6 +45,10 @@ The calibration also demonstrated why ordinary Euler roll/pitch mapping is insuf
 - Guided forward/backward/left/right calibration recording
 - Local CSV export containing attitude, acceleration, gravity, rotation rate, and mapped output
 - A tiny built-in slalom for testing steering feel
+- A built-in arcade flight target test with tap-to-fire
+- Direct analog aileron/elevator control of FlightGear over localhost
+- FlightGear sensitivity, inversion, tap-action, connection, and packet diagnostics
+- Neutral-on-disconnect, motion-stop, AirPod error, window-close, and app-quit safety
 - An opt-in Stem Lab for volume-swipe throttle and press/tap trigger experiments
 
 ## Requirements
@@ -151,6 +155,35 @@ In the first AirPods Pro 3 Stem Lab run, the IMU trigger produced clear 0.36–1
 
 Opening Stem Lab automatically creates a timestamped `podstick-stem-lab_*.csv` in `~/Documents/PodStick Captures`. It continuously records motion and stick values plus separate rows for volume changes, detected impulses, and media commands. Closing Stem Lab writes a final session row and closes the file.
 
+## Fly with FlightGear
+
+[FlightGear](https://www.flightgear.org/) is a free, open-source flight simulator for macOS. PodStick talks directly to its built-in property server over TCP on this Mac, so no virtual controller driver, Accessibility permission, or keyboard emulation is required.
+
+1. [Download and install FlightGear](https://www.flightgear.org/download/).
+2. Open the FlightGear Launcher.
+3. Under **Settings → Additional Settings**, add:
+
+   ```text
+   --telnet=5500
+   ```
+
+4. Start a flight. The default Cessna 172 is a friendly first test.
+5. In PodStick, click **FlightGear**.
+6. Confirm port `5500`, click **Connect**, hold the AirPod at neutral, and click **Re-zero**.
+7. Move the AirPod. Left/right drives `/controls/flight/aileron`; forward/backward drives `/controls/flight/elevator`.
+
+The FlightGear panel includes sensitivity and per-axis inversion in case an aircraft or grip feels reversed. Stem taps default to both wheel brakes, which is useful in the Cessna. They can instead drive `/controls/armament/pickle` for a compatible aircraft, or be disabled.
+
+PodStick deliberately connects only to `127.0.0.1`, so motion controls are never sent off the Mac. A connection normally produces about 50 control packets per second, matching the measured AirPods motion rate. Closing the FlightGear panel, disconnecting, stopping motion, losing the motion stream, closing PodStick, or quitting the app sends zero aileron/elevator and releases the selected tap action before closing the socket.
+
+### FlightGear connection troubleshooting
+
+- **Connection refused:** FlightGear is not running with `--telnet=5500`, the flight has not started yet, or its port differs from PodStick's port.
+- **Connected but the aircraft does not move:** Turn off the aircraft autopilot, click **Re-zero**, and verify the live aileron/elevator values change in PodStick.
+- **An axis is backward:** Enable **Invert aileron** or **Invert elevator** in the FlightGear panel.
+- **Controls feel too aggressive:** Lower FlightGear sensitivity. PodStick clamps both axes to FlightGear's conventional `-1...1` range.
+- **Port already in use:** Choose another port in both FlightGear's `--telnet=` option and the PodStick panel.
+
 ## How the learned mapping works
 
 The processing path is:
@@ -192,11 +225,13 @@ PodStickCore
 PodStick macOS app
 ├── MotionController
 ├── BaselineCapture
+├── FlightGearBridge
 ├── SwiftUI visualizer
-└── Slalom playground
+├── Slalom playground
+└── Built-in flight playground
 ```
 
-`MotionController` owns `CMHeadphoneMotionManager`, connection retry, permission state, neutral calibration, telemetry, mapping selection, and smoothing. `BaselineCapture` labels and persists raw experimental data. The SwiftUI layer only presents controls and output.
+`MotionController` owns `CMHeadphoneMotionManager`, connection retry, permission state, neutral calibration, telemetry, mapping selection, smoothing, and routing each processed sample. `FlightGearBridge` owns the localhost TCP connection and lifecycle neutralization. `BaselineCapture` labels and persists raw experimental data. The SwiftUI layer presents controls and output.
 
 ## Development
 
@@ -251,13 +286,17 @@ First click **Zero** in the intended neutral grip. The learned mapping assumes t
 
 ## Privacy
 
-PodStick has no network client and sends no motion data anywhere. Live samples remain in memory unless a baseline capture is explicitly started. Baseline CSV files are written only to `~/Documents/PodStick Captures`.
+PodStick has one opt-in network client: the FlightGear bridge, hard-coded to the loopback address `127.0.0.1`. It sends only mapped aileron/elevator values and configured tap events to a FlightGear process on the same Mac. It does not transmit raw motion samples or connect to the internet. Live samples remain in memory unless a capture is explicitly started. CSV files are written only to `~/Documents/PodStick Captures`.
+
+## Shutdown behavior
+
+Closing the last PodStick window quits the app and explicitly neutralizes FlightGear, closes its socket, and stops headphone motion, calibration capture, Core Audio listeners and polling, silent playback, Now Playing metadata, remote-command handlers, impulse detection, and Stem Lab recording. Stopping motion or losing the AirPods stream also neutralizes FlightGear. PodStick does not programmatically change system volume, the selected audio output, or Automatic Ear Detection, so those user-controlled settings are left as configured.
 
 ## Current limitations
 
 - Only one fused headphone-motion stream is available at a time.
 - The tested prototype uses one AirPod as one two-axis stick.
-- No virtual gamepad or keyboard emitter exists yet.
+- External control currently targets FlightGear specifically; no virtual gamepad or keyboard emitter exists yet.
 - The learned coefficients are tied to the first tested grip rather than a saved per-user profile.
 - Stem presses and swipes are not exposed through the public motion API.
 - Long-term drift, battery behavior, and behavior across AirPods generations need broader testing.

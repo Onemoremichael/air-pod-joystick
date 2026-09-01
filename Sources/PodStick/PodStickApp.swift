@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct PodStickApp: App {
+    @NSApplicationDelegateAdaptor(PodStickAppDelegate.self) private var appDelegate
     @StateObject private var motion = MotionController()
 
     var body: some Scene {
@@ -9,7 +10,10 @@ struct PodStickApp: App {
             ContentView()
                 .environmentObject(motion)
                 .frame(minWidth: 820, minHeight: 560)
-                .onAppear { motion.start() }
+                .onAppear {
+                    appDelegate.motionController = motion
+                    motion.start()
+                }
         }
         .windowStyle(.titleBar)
         .defaultSize(width: 920, height: 620)

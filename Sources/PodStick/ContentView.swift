@@ -4,6 +4,8 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var motion: MotionController
     @State private var showsStemLab = false
+    @State private var showsFlightSim = false
+    @State private var showsFlightGear = false
 
     var body: some View {
         VStack(spacing: 18) {
@@ -51,12 +53,20 @@ struct ContentView: View {
                 motion.isRunning ? motion.stop() : motion.start()
             }
             Button("Stem Lab") { showsStemLab = true }
+            Button("Flight Sim") { showsFlightSim = true }
+            Button("FlightGear") { showsFlightGear = true }
             Button("Zero") { motion.zero() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
                 .buttonStyle(.borderedProminent)
         }
         .sheet(isPresented: $showsStemLab) {
             StemLabView(lab: motion.stemLab)
+        }
+        .sheet(isPresented: $showsFlightSim) {
+            FlightSimView(motion: motion, lab: motion.stemLab)
+        }
+        .sheet(isPresented: $showsFlightGear) {
+            FlightGearView(motion: motion, bridge: motion.flightGear)
         }
     }
 

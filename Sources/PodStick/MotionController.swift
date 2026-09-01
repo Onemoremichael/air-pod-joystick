@@ -7,6 +7,7 @@ import PodStickCore
 final class MotionController: ObservableObject {
     let baselineCapture = BaselineCapture()
     let stemLab = StemInputLab()
+    let flightGear = FlightGearBridge()
     @Published private(set) var rawVector = StickVector.zero
     @Published private(set) var smoothedVector = StickVector.zero
     @Published private(set) var sampleRate = 0.0
@@ -80,10 +81,25 @@ final class MotionController: ObservableObject {
         wantsMotion = false
         monitorTask?.cancel()
         monitorTask = nil
+        flightGear.disconnect()
         manager.stopDeviceMotionUpdates()
         isRunning = false
         refreshDiagnostics()
         status = "Stopped"
+    }
+
+    func shutdown() {
+        wantsMotion = false
+        monitorTask?.cancel()
+        monitorTask = nil
+        manager.stopDeviceMotionUpdates()
+        isRunning = false
+        flightGear.shutdown()
+        if baselineCapture.isCapturing {
+            baselineCapture.cancel()
+        }
+        stemLab.stopAllExperiments()
+        stemLab.stopTrackingSession()
     }
 
     func zero() {
@@ -96,6 +112,16 @@ final class MotionController: ObservableObject {
         smoothedVector = .zero
         smoother.reset(to: .zero)
         status = "Streaming — zeroed"
+    }
+
+    func connectFlightGear() {
+        stemLab.impulseDetectionEnabled = true
+        flightGear.connect()
+    }
+
+    func disconnectFlightGear() {
+        flightGear.disconnect()
+        stemLab.impulseDetectionEnabled = false
     }
 
     func startBaselineCapture() {
@@ -136,11 +162,15 @@ final class MotionController: ObservableObject {
         }
         rawVector = mapped
         smoothedVector = smoother.update(mapped, at: motion.timestamp)
-        stemLab.consumeMotion(
+        let triggerDetected = stemLab.consumeMotion(
             motion,
             rawStick: rawVector,
             smoothedStick: smoothedVector
         )
+        flightGear.send(stick: outputVector)
+        if triggerDetected {
+            flightGear.fireTrigger()
+        }
         baselineCapture.record(
             motion: motion,
             attitude: attitude,

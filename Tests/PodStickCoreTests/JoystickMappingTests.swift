@@ -80,3 +80,26 @@ func learnedGripMapsRecordedPoses(
     #expect(!duringCooldown)
     #expect(afterCooldown)
 }
+
+@Test func flightGearCommandsMapAndClampAxes() {
+    let encoder = FlightGearCommandEncoder()
+    let data = encoder.controls(
+        stick: StickVector(x: 0.8, y: -0.5),
+        sensitivity: 1.5,
+        invertX: true
+    )
+    let commands = String(decoding: data, as: UTF8.self)
+
+    #expect(commands.contains("set /controls/flight/aileron -1.00000\r\n"))
+    #expect(commands.contains("set /controls/flight/elevator -0.75000\r\n"))
+}
+
+@Test func flightGearNeutralReleasesConfiguredTrigger() {
+    let encoder = FlightGearCommandEncoder()
+    let commands = String(decoding: encoder.neutral(tapAction: .brakes), as: UTF8.self)
+
+    #expect(commands.contains("set /controls/flight/aileron 0.00000\r\n"))
+    #expect(commands.contains("set /controls/flight/elevator 0.00000\r\n"))
+    #expect(commands.contains("set /controls/gear/brake-left 0.00000\r\n"))
+    #expect(commands.contains("set /controls/gear/brake-right 0.00000\r\n"))
+}

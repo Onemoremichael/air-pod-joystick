@@ -128,11 +128,12 @@ final class StemInputLab: ObservableObject {
         impulseDetector.reset()
     }
 
+    @discardableResult
     func consumeMotion(
         _ motion: CMDeviceMotion,
         rawStick: StickVector,
         smoothedStick: StickVector
-    ) {
+    ) -> Bool {
         let a = motion.userAcceleration
         let magnitude = sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
         latestAcceleration = magnitude
@@ -158,6 +159,7 @@ final class StemInputLab: ObservableObject {
             smoothedStick: smoothedStick,
             impulseDetected: detected
         )
+        return detected
     }
 
     func setMediaCommandsEnabled(_ enabled: Bool) {
