@@ -66,3 +66,17 @@ func learnedGripMapsRecordedPoses(
     #expect(abs(output.x - expected.x) < 0.11)
     #expect(abs(output.y - expected.y) < 0.11)
 }
+
+@Test func tapDetectorAppliesThresholdAndCooldown() {
+    var detector = TapImpulseDetector(thresholdG: 0.3, cooldown: 0.2)
+
+    let belowThreshold = detector.update(accelerationMagnitudeG: 0.29, timestamp: 1.0)
+    let firstTap = detector.update(accelerationMagnitudeG: 0.31, timestamp: 1.1)
+    let duringCooldown = detector.update(accelerationMagnitudeG: 0.8, timestamp: 1.2)
+    let afterCooldown = detector.update(accelerationMagnitudeG: 0.4, timestamp: 1.31)
+
+    #expect(!belowThreshold)
+    #expect(firstTap)
+    #expect(!duringCooldown)
+    #expect(afterCooldown)
+}

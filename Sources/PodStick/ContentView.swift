@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var motion: MotionController
+    @State private var showsStemLab = false
 
     var body: some View {
         VStack(spacing: 18) {
@@ -49,9 +50,13 @@ struct ContentView: View {
             Button(motion.isRunning ? "Stop" : "Start") {
                 motion.isRunning ? motion.stop() : motion.start()
             }
+            Button("Stem Lab") { showsStemLab = true }
             Button("Zero") { motion.zero() }
                 .keyboardShortcut("r", modifiers: [.command, .shift])
                 .buttonStyle(.borderedProminent)
+        }
+        .sheet(isPresented: $showsStemLab) {
+            StemLabView(lab: motion.stemLab)
         }
     }
 

@@ -6,6 +6,7 @@ import PodStickCore
 @MainActor
 final class MotionController: ObservableObject {
     let baselineCapture = BaselineCapture()
+    let stemLab = StemInputLab()
     @Published private(set) var rawVector = StickVector.zero
     @Published private(set) var smoothedVector = StickVector.zero
     @Published private(set) var sampleRate = 0.0
@@ -135,6 +136,11 @@ final class MotionController: ObservableObject {
         }
         rawVector = mapped
         smoothedVector = smoother.update(mapped, at: motion.timestamp)
+        stemLab.consumeMotion(
+            motion,
+            rawStick: rawVector,
+            smoothedStick: smoothedVector
+        )
         baselineCapture.record(
             motion: motion,
             attitude: attitude,

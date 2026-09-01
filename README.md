@@ -45,6 +45,7 @@ The calibration also demonstrated why ordinary Euler roll/pitch mapping is insuf
 - Guided forward/backward/left/right calibration recording
 - Local CSV export containing attitude, acceleration, gravity, rotation rate, and mapped output
 - A tiny built-in slalom for testing steering feel
+- An opt-in Stem Lab for volume-swipe throttle and press/tap trigger experiments
 
 ## Requirements
 
@@ -135,6 +136,20 @@ Each CSV contains:
 - Smoothed stick output
 
 Captures stay local and are not added to the repository.
+
+## Experiment with stem controls
+
+Click **Stem Lab** to open three independent experiments:
+
+- **Volume swipe → virtual throttle** observes changes to the default output device's Core Audio volume through both property notifications and a 20 Hz polling fallback, then mirrors the scalar as a 0–100% throttle. It does not restore the old value, so the swipe still changes actual system volume.
+- **IMU tap → trigger** detects user-acceleration impulses at an adjustable threshold with a short cooldown. It does not claim or alter media controls, but aggressive stick movement can create false positives.
+- **Force press → media command** starts silent playback and makes PodStick the Now Playing app so it can observe play/pause, next, and previous commands. This is explicitly opt-in because it temporarily takes those controls away from other media apps.
+
+The public APIs do not expose raw AirPods touch position or force-sensor state. These experiments observe system volume changes, motion impulses, and media-command side effects instead.
+
+In the first AirPods Pro 3 Stem Lab run, the IMU trigger produced clear 0.36–1.03 g impulses against a ~0.026 g median background. Neither property notifications nor 20 Hz polling observed volume changes from stem swipes, and the Now Playing experiment received no media commands. The volume and media-command panels remain diagnostic experiments; the IMU trigger is the only validated stem-adjacent input so far.
+
+Opening Stem Lab automatically creates a timestamped `podstick-stem-lab_*.csv` in `~/Documents/PodStick Captures`. It continuously records motion and stick values plus separate rows for volume changes, detected impulses, and media commands. Closing Stem Lab writes a final session row and closes the file.
 
 ## How the learned mapping works
 
