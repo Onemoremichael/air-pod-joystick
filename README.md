@@ -30,6 +30,8 @@ The measured ~49 Hz stream is substantially better than the project's original 2
 
 The calibration also demonstrated why ordinary Euler roll/pitch mapping is insufficient for this grip. Tabletop forward, backward, left, and right movements rotate the diagonally oriented AirPod across all three quaternion components. PodStick therefore uses the full relative rotation vector and a learned projection rather than assigning roll and pitch directly to X and Y.
 
+The first end-to-end simulator test also succeeded with FlightGear 2024.1.7 on Apple Silicon. PodStick established a localhost TCP connection after the simulator entered a running flight, streamed the learned analog mapping into the Cessna's aileron and elevator controls, and produced responsive flight control from the tabletop AirPod. The FlightGear Launcher by itself does not open the property-server port; the flight must finish loading before PodStick can connect.
+
 ## Features
 
 - Live `CMHeadphoneMotionManager` capture
@@ -165,9 +167,10 @@ Opening Stem Lab automatically creates a timestamped `podstick-stem-lab_*.csv` i
 
    ```text
    --telnet=5500
+   --timeofday=noon
    ```
 
-4. Start a flight. The default Cessna 172 is a friendly first test.
+4. Start a flight—the launcher alone is not enough. The default Cessna 172 is a friendly first test.
 5. In PodStick, click **FlightGear**.
 6. Confirm port `5500`, click **Connect**, hold the AirPod at neutral, and click **Re-zero**.
 7. Move the AirPod. Left/right drives `/controls/flight/aileron`; forward/backward drives `/controls/flight/elevator`.
@@ -176,9 +179,28 @@ The FlightGear panel includes sensitivity and per-axis inversion in case an airc
 
 PodStick deliberately connects only to `127.0.0.1`, so motion controls are never sent off the Mac. A connection normally produces about 50 control packets per second, matching the measured AirPods motion rate. Closing the FlightGear panel, disconnecting, stopping motion, losing the motion stream, closing PodStick, or quitting the app sends zero aileron/elevator and releases the selected tap action before closing the socket.
 
+### Skip takeoff and start in the air
+
+In the FlightGear Launcher, open **Location**, choose an airport and runway, and select **On final approach** rather than a parking position. A distance around 10 miles gives enough room to get comfortable with the controls. Turn away from the runway after loading if you just want to explore. The [FlightGear 2024.1 manual](https://flightgear.gitlab.io/getstart/release-2024.1/en/HTML/getstart-ench4.html) documents its airborne and approach starting positions.
+
+Alternatively, add a free-flight preset under **Settings → Additional Settings**:
+
+```text
+--in-air
+--altitude=3000
+--vc=110
+```
+
+This starts the Cessna airborne at about 3,000 feet and 110 knots. Keep `--telnet=5500` and `--timeofday=noon` in the same settings box.
+
+### Apple Silicon rendering workaround
+
+FlightGear 2024.1 has known rendering issues on Apple Silicon. A black cockpit with stars, runway lights, or bright outlines can be a combination of a real-time nighttime start and the Atmospheric Light Scattering renderer. Start with `--timeofday=noon`. If the cockpit is still rendered incorrectly, open **View → Rendering Options**, disable **Atmospheric Light Scattering**, and lower **Shader Quality**. [FlightGear's maintainers recommend those settings](https://www.flightgear.org/blog/release-2024-1-2/) for affected Macs.
+
 ### FlightGear connection troubleshooting
 
-- **Connection refused:** FlightGear is not running with `--telnet=5500`, the flight has not started yet, or its port differs from PodStick's port.
+- **Connection refused:** FlightGear is not running with `--telnet=5500`, the launcher is open but **Fly** has not produced a running flight yet, or its port differs from PodStick's port.
+- **Black or outlined cockpit on an Apple Silicon Mac:** Force noon first, then disable Atmospheric Light Scattering and lower Shader Quality.
 - **Connected but the aircraft does not move:** Turn off the aircraft autopilot, click **Re-zero**, and verify the live aileron/elevator values change in PodStick.
 - **An axis is backward:** Enable **Invert aileron** or **Invert elevator** in the FlightGear panel.
 - **Controls feel too aggressive:** Lower FlightGear sensitivity. PodStick clamps both axes to FlightGear's conventional `-1...1` range.

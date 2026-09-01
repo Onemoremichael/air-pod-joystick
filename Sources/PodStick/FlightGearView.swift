@@ -21,12 +21,12 @@ struct FlightGearView: View {
 
             GroupBox("1. Start FlightGear") {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Add this option in FlightGear Launcher → Settings → Additional Settings:")
-                    Text("--telnet=\(bridge.port)")
+                    Text("Add these options in FlightGear Launcher → Settings → Additional Settings:")
+                    Text("--telnet=\(bridge.port)\n--timeofday=noon")
                         .font(.title3.monospaced().bold())
                         .textSelection(.enabled)
                     Link("Download FlightGear", destination: URL(string: "https://www.flightgear.org/download/")!)
-                    Text("Start a flight before connecting. The default Cessna 172 is a good first test.")
+                    Text("Press Fly and wait for the flight to finish loading before connecting. The launcher alone does not open the port. To skip takeoff, choose Location → On final approach.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
